@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1004883029443",
+    "project_id": "lyfteddemo",
+    "storage_bucket": "lyfteddemo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004883029443:android:c8d873d32be47ae2dc6176",
+        "android_client_info": {
+          "package_name": "com.testingapp.lyfteddemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004883029443-ud4o7kisdlbg5ln61u1g4i4vrgj4i6l5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArXyWBpqJKaGWOxihwSStcq_JF1QFg8aA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004883029443-ud4o7kisdlbg5ln61u1g4i4vrgj4i6l5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

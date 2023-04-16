@@ -1,6 +1,12 @@
 // Automatic FlutterFlow imports
 import 'dart:io';
 
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit_config.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_session.dart';
+import 'package:ffmpeg_kit_flutter/level.dart';
+import 'package:ffmpeg_kit_flutter/return_code.dart';
+import 'package:ffmpeg_kit_flutter/session.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'index.dart'; // Imports other custom widgets
@@ -38,19 +44,22 @@ class _AudioRecorderAndPlayerTestState
   bool _isPaused = false;
   bool _isPlaying = false;
   int _recordDuration = 0;
-  String? path = '';
+  String? path;
   Timer? _timer;
   Timer? _ampTimer;
-  String? _filePath;
-  String? _mp3FilePath;
+  File? _mp3File;
+  Directory? directory;
+  Directory? subdirectory;
   final _audioRecorder = Record();
   final player = AudioPlayer();
+  bool _isConverting = false;
 
   Amplitude? _amplitude;
 
   @override
   void initState() {
     super.initState();
+    _createAudioDir();
 
     WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
   }
@@ -61,6 +70,14 @@ class _AudioRecorderAndPlayerTestState
     _audioRecorder.dispose();
     player.stop();
     super.dispose();
+  }
+
+  Future<void> _createAudioDir() async {
+    directory = await getExternalStorageDirectory();
+    subdirectory = Directory('${directory!.path}/my_audio_files');
+    if (subdirectory != null) {
+      await subdirectory?.create(recursive: true);
+    }
   }
 
   Future<void> _start() async {
@@ -83,56 +100,6 @@ class _AudioRecorderAndPlayerTestState
     }
   }
 
-  // Future<void> _stop() async {
-  //   _timer?.cancel();
-  //   _ampTimer?.cancel();
-
-  //   // This is the path of the recorded file.
-  //   path = await _audioRecorder.stop();
-
-  //   setState(() => _isRecording = false);
-  //   setState(() => _isPaused = true);
-
-  //   final directory = await getExternalStorageDirectory();
-  //   print("directory: $directory");
-  //   final subdirectory = Directory('${directory!.path}/my_audio_files');
-  //   print("subdirectory: $subdirectory");
-  //   await subdirectory.create(recursive: true);
-  //   print("Subdirectory created: ${await subdirectory.exists()}");
-
-  //   final mp3FilePath = '${subdirectory.path}/recording.mp3';
-  //   String m4aFilePath = path!;
-
-  //   final String command =
-  //       '-i $m4aFilePath -vn -ar 44100 -ac 2 -b:a 192k -f mp3 $mp3FilePath';
-  //   final storagePermissionStatus = await Permission.storage.status;
-  //   if (storagePermissionStatus.isGranted) {
-  //     await _copyAndConvertAudioFile(command, m4aFilePath, mp3FilePath);
-  //   } else {
-  //     final storagePermissionResult = await Permission.storage.request();
-  //     if (storagePermissionResult.isGranted) {
-  //       await _copyAndConvertAudioFile(command, m4aFilePath, mp3FilePath);
-  //     } else {
-  //       // Handle the user's response to the permission request
-  //       // e.g. show a dialog explaining why the permission is needed
-  //     }
-  //   }
-  // }
-
-  // Future<void> _copyAndConvertAudioFile(
-  //   String command,
-  //   String m4aFilePath,
-  //   String mp3FilePath,
-  // ) async {
-  //   await FFmpegKit.executeAsync(command);
-
-  //   final fileTest = File(mp3FilePath);
-  //   if (await fileTest.exists()) {
-  //     print("File exists");
-  //   } else {
-  //     print("File does not exist");
-  //   }
-  // }
   Future<void> _stop() async {
     _timer?.cancel();
     _ampTimer?.cancel();
@@ -140,39 +107,67 @@ class _AudioRecorderAndPlayerTestState
     // This is the path of the recorded file.
     path = await _audioRecorder.stop();
 
-    setState(() => _isRecording = false);
-    setState(() => _isPaused = true);
-
-    final directory = await getExternalStorageDirectory();
-    print("directory: $directory");
-    final subdirectory = Directory('${directory!.path}/my_audio_files');
-    print("subdirectory: $subdirectory");
-    await subdirectory.create(recursive: true);
-
-    final mp3FilePath = '${subdirectory.path}/recording.mp3';
-    String m4aFilePath = path!;
-
-    final String command =
-        '-i $m4aFilePath -vn -ar 44100 -ac 2 -b:a 192k -f mp3 $mp3FilePath';
-    FFmpegKit.executeAsync(command).then((result) async {
-      print(await result.getState());
-      if (await File(mp3FilePath).exists()) {
-        print("File created successfully");
-      } else {
-        print("Error creating file");
-      }
-    }).catchError((error) {
-      print("Error while running FFmpeg: $error");
+    setState(() {
+      _isRecording = false;
+      _isPaused = true;
     });
+
+    final mp3FilePath = '${subdirectory?.path}/recording.mp3';
+    final m4aCopyFilePath = '${subdirectory?.path}/recording.m4a';
+    String m4aFilePath = path!;
+    File _m4aFile = File(m4aFilePath);
 
     try {
       final file = File(m4aFilePath);
-      final copyFile = await file.copy(mp3FilePath);
-      print("File copied successfully: ${copyFile.path}");
+      await file.copy(mp3FilePath);
+      await file.copy(m4aCopyFilePath);
     } catch (error, stackTrace) {
-      print("Error while copying file: $error");
       print(stackTrace);
     }
+    await _convertM4aToMp3(File(m4aCopyFilePath));
+  }
+
+  Future<void> _convertM4aToMp3(File m4aFile) async {
+    setState(() {
+      _isConverting = true;
+    });
+
+    final outputFilePath = '${subdirectory?.path}/converted-test.mp3';
+    final argument =
+        '-hide_banner -y -i ${m4aFile.path} -c:a libmp3lame -qscale:a 2 $outputFilePath';
+    FFmpegKit.execute(argument).then((session) async {
+      final state =
+          FFmpegKitConfig.sessionStateToString(await session.getState());
+      final returnCode = await session.getReturnCode();
+      final failStackTrace = await session.getFailStackTrace();
+
+      if (ReturnCode.isSuccess(returnCode)) {
+        print("Encode completed successfully.");
+        listAllLogs(session);
+      } else {
+        print("Encode failed. Please check log for the details.");
+        print(
+            "Encode failed with state ${state} and rc ${returnCode}.${notNull(failStackTrace, "\n")}");
+      }
+    });
+
+    setState(() {
+      _isConverting = false;
+    });
+  }
+
+  String notNull(String? string, [String valuePrefix = ""]) {
+    return (string == null) ? "" : valuePrefix + string;
+  }
+
+  void listAllLogs(Session session) async {
+    print("Listing log entries for session: ${session.getSessionId()}");
+    var allLogs = await session.getAllLogs();
+    allLogs.forEach((element) {
+      print(
+          "${Level.levelToString(element.getLevel())}:${element.getMessage()}");
+    });
+    print("Listed log entries for session: ${session.getSessionId()}");
   }
 
   Future<void> _play() async {

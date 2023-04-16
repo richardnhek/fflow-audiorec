@@ -58,16 +58,24 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               Container(
                 width: 200.0,
                 height: 200.0,
-                child: custom_widgets.SoundRecordAndPlayCopy(
+                child: custom_widgets.AudioRecorderFlutterSound(
                   width: 200.0,
                   height: 200.0,
                 ),
               ),
-              wrapWithModel(
-                model: _model.audioPlayerTestModel,
-                updateCallback: () => setState(() {}),
-                child: AudioPlayerTestWidget(),
-              ),
+              // Container(
+              //   width: 400,
+              //   height: 200,
+              //   child: custom_widgets.VideoRecorderTest(
+              //     width: 200.0,
+              //     height: 200.0,
+              //   ),
+              // ),
+              // wrapWithModel(
+              //   model: _model.audioPlayerTestModel,
+              //   updateCallback: () => setState(() {}),
+              //   child: AudioPlayerTestWidget(),
+              // ),
             ],
           ),
         ),

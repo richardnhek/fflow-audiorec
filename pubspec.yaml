@@ -54,6 +54,12 @@ dependencies:
   url_launcher: 6.1.5
   external_path: 1.0.3
   permission_handler: 10.2.0
+  camera: 0.10.3+2
+  image_picker: 0.8.6+4
+  flutter_sound: 9.2.13
+  record_mp3: 3.0.0
+  firebase_storage: ^11.1.0
+  firebase_core: ^2.9.0
 
 
   # The following adds the Cupertino Icons font to your application.
