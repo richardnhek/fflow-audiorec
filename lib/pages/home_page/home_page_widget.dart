@@ -37,49 +37,51 @@ class _HomePageWidgetState extends State<HomePageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).requestFocus(_unfocusNode),
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 200.0,
-                height: 200.0,
-                child: custom_widgets.AudioRecorderAndPlayerTest(
-                  width: 200.0,
-                  height: 200.0,
-                ),
-              ),
-              Container(
-                width: 200.0,
-                height: 200.0,
-                child: custom_widgets.AudioRecorderFlutterSound(
-                  width: 200.0,
-                  height: 200.0,
-                ),
-              ),
-              // Container(
-              //   width: 400,
-              //   height: 200,
-              //   child: custom_widgets.VideoRecorderTest(
-              //     width: 200.0,
-              //     height: 200.0,
-              //   ),
-              // ),
-              // wrapWithModel(
-              //   model: _model.audioPlayerTestModel,
-              //   updateCallback: () => setState(() {}),
-              //   child: AudioPlayerTestWidget(),
-              // ),
-            ],
-          ),
-        ),
-      ),
-    );
+    // return GestureDetector(
+    //   onTap: () => FocusScope.of(context).requestFocus(_unfocusNode),
+    //   child: Scaffold(
+    //     key: scaffoldKey,
+    //     backgroundColor: Colors.white,
+    //     body: SafeArea(
+    //       child: Column(
+    //         mainAxisSize: MainAxisSize.max,
+    //         crossAxisAlignment: CrossAxisAlignment.stretch,
+    //         children: [
+    // Container(
+    //   width: 200.0,
+    //   height: 200.0,
+    //   child: custom_widgets.AudioRecorderAndPlayerTest(
+    //     width: 200.0,
+    //     height: 200.0,
+    //   ),
+    // ),
+    // Container(
+    //   width: 200.0,
+    //   height: 200.0,
+    //   child: custom_widgets.AudioRecorderFlutterSound(
+    //     width: 200.0,
+    //     height: 200.0,
+    //   ),
+    // ),
+    // return custom_widgets.VideoRecorder();
+    return Center(child: custom_widgets.AudioRecorderAndAnimation());
+    // Container(
+    //   width: 400,
+    //   height: 200,
+    //   child: custom_widgets.VideoRecorderTest(
+    //     width: 200.0,
+    //     height: 200.0,
+    //   ),
+    // ),
+    // wrapWithModel(
+    //   model: _model.audioPlayerTestModel,
+    //   updateCallback: () => setState(() {}),
+    //   child: AudioPlayerTestWidget(),
+    // ),
+    //         ],
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 }
