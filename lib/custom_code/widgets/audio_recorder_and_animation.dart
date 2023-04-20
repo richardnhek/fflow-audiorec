@@ -1,14 +1,13 @@
 // Automatic FlutterFlow imports
 // Imports other custom widgets
-import 'dart:math';
-import 'dart:typed_data';
 
-import 'package:dotted_line/dotted_line.dart';
-import 'package:ffmpeg_kit_flutter_audio/session_state.dart';
 import 'package:flutter/material.dart';
 // Begin custom widget code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
-
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:dotted_line/dotted_line.dart';
+import 'package:ffmpeg_kit_flutter_audio/session_state.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -82,6 +81,10 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
   void dispose() {
     _streamController?.close();
     _timer?.cancel();
+    playerController.dispose();
+    _recorderController.dispose();
+    _iOSrecorderController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 

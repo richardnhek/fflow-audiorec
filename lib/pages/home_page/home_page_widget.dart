@@ -64,7 +64,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     //   ),
     // ),
     // return custom_widgets.VideoRecorder();
-    return Center(child: custom_widgets.AudioRecorderAndAnimation());
+    return Center(child: custom_widgets.VideoRecorder());
     // Container(
     //   width: 400,
     //   height: 200,
