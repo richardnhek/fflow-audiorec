@@ -216,21 +216,23 @@ class _SoundRecordAndPlayCopyState extends State<SoundRecordAndPlayCopy> {
     } else {
       return Padding(
         padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
-        child: InkWell(
-          onTap: () async {
-            _start();
-          },
-          child: Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Color(0x4DD9376E),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.mic_none,
-              color: FlutterFlowTheme.of(context).tertiaryColor,
-              size: 45,
+        child: Material(
+          child: InkWell(
+            onTap: () async {
+              _start();
+            },
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Color(0x4DD9376E),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.mic_none,
+                color: FlutterFlowTheme.of(context).tertiaryColor,
+                size: 45,
+              ),
             ),
           ),
         ),

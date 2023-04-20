@@ -41,7 +41,11 @@ class _VideoRecorderState extends State<VideoRecorder> {
   }
 
   Future<void> _createDir() async {
-    directory = await getExternalStorageDirectory();
+    if (Platform.isAndroid) {
+      directory = await getExternalStorageDirectory();
+    } else {
+      directory = await getApplicationDocumentsDirectory();
+    }
     subdirectory = Directory('${directory!.path}/my_video_files');
     vidSubdirectory = Directory('${directory!.path}/my_extracted_audio_files');
     if (subdirectory != null && vidSubdirectory != null) {
