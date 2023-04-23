@@ -72,6 +72,7 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
       setState(() {
         _isPlaying = false;
         _isFinished = true;
+        print("_isFinished: $_isFinished");
       });
     });
     super.initState();
@@ -142,6 +143,11 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
       var status = await Permission.microphone.request();
       if (status == PermissionStatus.granted) {
         _elapsedSeconds = 0;
+        playerController.stopPlayer();
+        setState(() {
+          _isFinished = true;
+          _isPlaying = false;
+        });
         await _recorderController.record();
         setState(() {
           _isRecording = true;
@@ -153,6 +159,11 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
       }
     } else {
       _elapsedSeconds = 0;
+      playerController.stopPlayer();
+      setState(() {
+        _isFinished = true;
+        _isPlaying = false;
+      });
       await _iOSrecorderController.record(path: _iOSTmpRecordedPath);
       setState(() {
         _isRecording = true;
@@ -167,12 +178,11 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
   Future<void> _stopRecording() async {
     if (Platform.isAndroid) {
       final recordedPath = await _recorderController.stop();
-      await playerController.preparePlayer(
-        path: recordedPath!,
-        shouldExtractWaveform: true,
-        noOfSamples: 100,
-        volume: 1.0,
-      );
+      playerController.preparePlayer(
+          path: recordedPath!,
+          volume: 1.0,
+          shouldExtractWaveform: true,
+          noOfSamples: 100);
       _stopTimer();
       setState(() {
         _isRecording = false;
@@ -183,12 +193,11 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
       await _m4aToMp3Conversion(recordedPath);
     } else {
       final iOSDefaultRecPath = await _iOSrecorderController.stop();
-      await playerController.preparePlayer(
-        path: iOSDefaultRecPath!,
-        shouldExtractWaveform: true,
-        noOfSamples: 100,
-        volume: 1.0,
-      );
+      playerController.preparePlayer(
+          path: iOSDefaultRecPath!,
+          volume: 1.0,
+          shouldExtractWaveform: true,
+          noOfSamples: 100);
       _stopTimer();
       setState(() {
         _isRecording = false;
@@ -267,14 +276,18 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
 
   Future<void> _uploadAudio(Uint8List audioFile) async {
     if (await File(_mainFilePath!).exists()) {
+      playerController.stopPlayer();
       setState(() {
         _uploadingDone = false;
       });
       String randomAudioID = generateRandomString(8);
       String fileName = 'audio-$randomAudioID.mp3';
+      SettableMetadata fileMetaData =
+          SettableMetadata(contentType: 'audio/mpeg');
       Reference firebaseStorageRef =
           FirebaseStorage.instance.ref().child("audios/$fileName");
-      UploadTask uploadTask = firebaseStorageRef.putData(audioFile);
+      UploadTask uploadTask =
+          firebaseStorageRef.putData(audioFile, fileMetaData);
       TaskSnapshot? taskSnapshot;
       try {
         taskSnapshot = await uploadTask;
@@ -284,9 +297,12 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
       String downloadUrl = await taskSnapshot!.ref.getDownloadURL();
       print("downloadUrl: $downloadUrl");
       await File(_mainFilePath!).delete();
-      await _deleteAudio();
       setState(() {
         _uploadingDone = true;
+        _isDeleted = true;
+        _firstTime = true;
+        _isFinished = true;
+        _isPlaying = false;
       });
     }
   }
@@ -295,7 +311,10 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
     setState(() {
       _isDeleted = true;
       _firstTime = true;
+      _isFinished = true;
+      _isPlaying = false;
     });
+    playerController.stopPlayer();
   }
 
   @override
@@ -407,7 +426,7 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
                                     AudioFileWaveforms(
                                         size: Size(
                                             MediaQuery.of(context).size.width /
-                                                2,
+                                                3,
                                             50),
                                         waveformType: WaveformType.long,
                                         playerController: playerController,
@@ -420,13 +439,6 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
                                           spacing: 5.0,
                                           showBottom: true,
                                         )),
-                                    // Text(
-                                    //   "${playerController.getDuration()} Min",
-                                    //   style: GoogleFonts.inter(
-                                    //       fontWeight: FontWeight.w600,
-                                    //       fontSize: 14,
-                                    //       color: Color(0xFF264045)),
-                                    // ),
                                     FutureBuilder<String>(
                                       future: playerController
                                           .getDuration()
@@ -446,8 +458,10 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
                                     IconButton(
                                       onPressed: () async {
                                         if (_isPlaying) {
+                                          print("Pause Player");
                                           await playerController.pausePlayer();
                                         } else {
+                                          print("Start Player");
                                           await playerController.startPlayer(
                                               finishMode: FinishMode.pause);
                                         }
