@@ -18,7 +18,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit_config.dart';
-import 'package:animated_text_kit/animated_text_kit.dart';
 
 class AudioRecorderAndAnimation extends StatefulWidget {
   const AudioRecorderAndAnimation({Key? key, this.width, this.height})
@@ -140,19 +139,32 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
   }
 
   void _startRecording() async {
-    var status = await Permission.microphone.request();
-    if (status == PermissionStatus.granted) {
+    if (Platform.isAndroid) {
+      var status = await Permission.microphone.request();
+      if (status == PermissionStatus.granted) {
+        _elapsedSeconds = 0;
+        playerController.stopPlayer();
+        setState(() {
+          _isFinished = true;
+          _isPlaying = false;
+        });
+        await _recorderController.record();
+        setState(() {
+          _isRecording = true;
+          _isDeleted = false;
+          _firstTime = false;
+        });
+        _resetTimer();
+        _startTimer();
+      }
+    } else {
       _elapsedSeconds = 0;
       playerController.stopPlayer();
       setState(() {
         _isFinished = true;
         _isPlaying = false;
       });
-      if (Platform.isAndroid) {
-        await _recorderController.record();
-      } else {
-        await _iOSrecorderController.record(path: _iOSTmpRecordedPath);
-      }
+      await _iOSrecorderController.record(path: _iOSTmpRecordedPath);
       setState(() {
         _isRecording = true;
         _isDeleted = false;
@@ -733,20 +745,9 @@ class _AudioRecorderAndAnimationState extends State<AudioRecorderAndAnimation>
         if (!_uploadingDone)
           Positioned.fill(
             child: Container(
+              color: Colors.black.withOpacity(0.5),
               child: Center(
-                child: AnimatedTextKit(
-                  animatedTexts: [
-                    TypewriterAnimatedText(
-                      "lyfting",
-                      textStyle: GoogleFonts.ibmPlexSerif(
-                          color: Color.fromARGB(255, 255, 255, 255),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 48),
-                      textAlign: TextAlign.center,
-                      speed: Duration(milliseconds: 75),
-                    ),
-                  ],
-                ),
+                child: CircularProgressIndicator(),
               ),
             ),
           )

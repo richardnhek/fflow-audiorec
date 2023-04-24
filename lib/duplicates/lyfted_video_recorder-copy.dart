@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_audio/session_state.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -32,6 +31,8 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
   bool _isRecording = false;
   bool _firstTime = false;
   bool _uploadingDone = true;
+  bool _isPlaying = false;
+  bool _isFinished = false;
   bool _isDeleted = false;
   int _elapsedSeconds = 0;
   int _questionIndex = 0;
@@ -67,17 +68,16 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
       );
       _initializeControllerFuture = _controller?.initialize();
       await _initializeControllerFuture;
+      _createDir();
+      _streamController = StreamController<int>.broadcast();
+      _streamController?.add(_elapsedSeconds);
+      _animationController =
+          new AnimationController(vsync: this, duration: Duration(seconds: 1));
+      _animationController.repeat(reverse: true);
       setState(() {
         _firstTime = true;
       });
     });
-    _createDir();
-    _streamController = StreamController<int>.broadcast();
-    _streamController?.add(_elapsedSeconds);
-    _animationController =
-        new AnimationController(vsync: this, duration: Duration(seconds: 1));
-    _animationController.repeat(reverse: true);
-
     super.initState();
   }
 
@@ -188,7 +188,13 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
   Future<void> _startVideoRecording() async {
     var status = await Permission.camera.request();
     if (status == PermissionStatus.granted) {
+      await _initializeControllerFuture;
       _elapsedSeconds = 0;
+
+      setState(() {
+        _isFinished = true;
+        _isPlaying = false;
+      });
       await _controller?.startVideoRecording();
       setState(() {
         _isRecording = true;
@@ -216,7 +222,6 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
   }
 
   Future<void> _extractAudio(String vidPath) async {
-    print(vidPath);
     String extractedDirPath = directory!.path + '/my_extracted_audio_files';
     String extractedFilePath = extractedDirPath + '/ext-audio.mp3';
     setState(() {
@@ -242,34 +247,6 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
     });
   }
 
-  // Future<void> _uploadAudio(Uint8List audioFile) async {
-  //   if (await File(_mainFilePath!).exists()) {
-  //     setState(() {
-  //       _uploadingDone = false;
-  //     });
-  //     String randomAudioID = generateRandomString(8);
-  //     String fileName = 'audio-$randomAudioID.mp3';
-  //     SettableMetadata fileMetaData =
-  //         SettableMetadata(contentType: 'audio/mpeg');
-  //     Reference firebaseStorageRef =
-  //         FirebaseStorage.instance.ref().child("audios/$fileName");
-  //     UploadTask uploadTask =
-  //         firebaseStorageRef.putData(audioFile, fileMetaData);
-  //     TaskSnapshot? taskSnapshot;
-  //     try {
-  //       taskSnapshot = await uploadTask;
-  //     } on FirebaseException catch (e) {
-  //       print("FirebaseException: $e");
-  //     }
-  //     String downloadUrl = await taskSnapshot!.ref.getDownloadURL();
-  //     print("downloadUrl: $downloadUrl");
-  //     await File(_mainFilePath!).delete();
-  //     setState(() {
-  //       _isDeleted = true;
-  //       _firstTime = true;
-  //     });
-  //   }
-  // }
   Future<void> _uploadAudio(Uint8List audioFile) async {
     if (await File(_mainFilePath!).exists()) {
       setState(() {
@@ -292,27 +269,6 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
       String downloadUrl = await taskSnapshot!.ref.getDownloadURL();
       print("downloadUrl: $downloadUrl");
       await File(_mainFilePath!).delete();
-    }
-  }
-
-  Future<void> _uploadVideo(Uint8List vidFile) async {
-    if (await File(_vidFilePath!).exists()) {
-      String randomVidID = generateRandomString(8);
-      String fileName = 'video-$randomVidID.mp4';
-      SettableMetadata fileMetaData =
-          SettableMetadata(contentType: 'video/mp4');
-      Reference firebaseStorageRef =
-          FirebaseStorage.instance.ref().child("videos/$fileName");
-      UploadTask uploadTask = firebaseStorageRef.putData(vidFile, fileMetaData);
-      TaskSnapshot? taskSnapshot;
-      try {
-        taskSnapshot = await uploadTask;
-      } on FirebaseException catch (e) {
-        print("FirebaseException: $e");
-      }
-      String downloadUrl = await taskSnapshot!.ref.getDownloadURL();
-      print("downloadUrl: $downloadUrl");
-      await File(_vidFilePath!).delete();
       setState(() {
         _isDeleted = true;
         _firstTime = true;
@@ -326,7 +282,6 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
     });
     await _extractAudio(_vidFilePath!);
     await _uploadAudio(await File(_mainFilePath!).readAsBytes());
-    await _uploadVideo(await File(_vidFilePath!).readAsBytes());
     setState(() {
       _questionIndex = 0;
       _uploadingDone = true;
@@ -335,15 +290,9 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
 
   @override
   void dispose() {
+    // Dispose of the controller when the widget is disposed
     _controller?.dispose();
-    if (_initializeControllerFuture != null) {
-      _initializeControllerFuture = null;
-    }
     _animationController.dispose();
-    _streamController?.close();
-    _timer?.cancel();
-    _questionTimer?.cancel();
-    _pieTimerKey.currentState?._animController.dispose();
     super.dispose();
   }
 
@@ -743,19 +692,8 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
               child: Container(
                 color: Colors.black.withOpacity(0.5),
                 child: Center(
-                    child: AnimatedTextKit(
-                  animatedTexts: [
-                    TypewriterAnimatedText(
-                      "lyfting",
-                      textStyle: GoogleFonts.ibmPlexSerif(
-                          color: Color.fromARGB(255, 255, 255, 255),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 48),
-                      textAlign: TextAlign.center,
-                      speed: Duration(milliseconds: 75),
-                    ),
-                  ],
-                )),
+                  child: CircularProgressIndicator(),
+                ),
               ),
             ),
         ],
@@ -787,6 +725,88 @@ class _LyftedVideoRecorderState extends State<LyftedVideoRecorder>
       );
 }
 
+// class PieTimer extends StatefulWidget {
+//   final double progress;
+//   final Duration duration;
+//   final bool isVideoRecording;
+//   final int questionIndex;
+
+//   PieTimer(
+//       {required this.progress,
+//       required this.duration,
+//       required this.questionIndex,
+//       required this.isVideoRecording});
+
+//   @override
+//   _PieTimerState createState() => _PieTimerState();
+// }
+
+// class _PieTimerState extends State<PieTimer>
+//     with SingleTickerProviderStateMixin {
+//   late AnimationController _animationController;
+//   late Tween<double> _tween;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _animationController = AnimationController(
+//       vsync: this,
+//       duration: Duration(seconds: 5),
+//     );
+//     _tween = Tween<double>(begin: widget.progress, end: 0.0);
+//     _animationController.addStatusListener((status) {
+//       if (status == AnimationStatus.completed) {
+//         _animationController.reset();
+//         _animationController.forward();
+//       }
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     _animationController.dispose();
+//     super.dispose();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//         width: 20,
+//         height: 20,
+//         child: widget.isVideoRecording
+//             ? AnimatedBuilder(
+//                 animation: _animationController,
+//                 builder: (BuildContext context, Widget? child) {
+//                   return CustomPaint(
+//                     painter: _PieTimerPainter(
+//                       progress: _tween.evaluate(
+//                         AlwaysStoppedAnimation(
+//                           _animationController.value,
+//                         ),
+//                       ),
+//                     ),
+//                   );
+//                 },
+//               )
+//             : CustomPaint(
+//                 painter: _PieTimerPainter(
+//                     progress: widget
+//                         .progress), // or any other widget that you want to render when not recording
+//               ));
+//   }
+
+//   @override
+//   void didUpdateWidget(covariant PieTimer oldWidget) {
+//     super.didUpdateWidget(oldWidget);
+//     if (widget.isVideoRecording != oldWidget.isVideoRecording) {
+//       if (widget.isVideoRecording) {
+//         _animationController.forward();
+//       } else {
+//         _animationController.reset();
+//       }
+//     }
+//   }
+// }
 class PieTimer extends StatefulWidget {
   final double progress;
   final Duration duration;
@@ -808,16 +828,30 @@ class PieTimer extends StatefulWidget {
 
 class _PieTimerState extends State<PieTimer>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+  late AnimationController _animationController;
   late Tween<double> _tween;
 
+  // void onFinalIndex() async {
+  //   _animationController.addStatusListener((status) {
+  //     if (status == AnimationStatus.completed) {
+  //       if (_animationController.isAnimating) {
+  //         _animationController.stop();
+  //       } else {
+  //         _animationController
+  //             .forward()
+  //             .then((_) => _animationController.stop());
+  //       }
+  //     }
+  //   });
+  // }
+
   void onFinalIndex() async {
-    _animController.reset();
-    _animController.forward();
-    _animController.addStatusListener((status) {
+    _animationController.reset();
+    _animationController.forward();
+    _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        if (_animController.isAnimating) {
-          _animController.stop();
+        if (_animationController.isAnimating) {
+          _animationController.stop();
         }
       }
     });
@@ -826,17 +860,23 @@ class _PieTimerState extends State<PieTimer>
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+    _animationController = AnimationController(
       vsync: this,
       duration: widget.duration,
     );
     _tween = Tween<double>(begin: widget.progress, end: 0.0);
-    _animController.addStatusListener((status) {
+    _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _animController.reset();
-        _animController.forward();
+        _animationController.reset();
+        _animationController.forward();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -844,9 +884,9 @@ class _PieTimerState extends State<PieTimer>
     super.didUpdateWidget(oldWidget);
     if (widget.isVideoRecording != oldWidget.isVideoRecording) {
       if (widget.isVideoRecording) {
-        _animController.forward();
+        _animationController.forward();
       } else {
-        _animController.reset();
+        _animationController.reset();
       }
     }
   }
@@ -855,8 +895,8 @@ class _PieTimerState extends State<PieTimer>
   void reset() {
     setState(() {
       _tween = Tween<double>(begin: widget.progress, end: 0.0);
-      _animController.reset();
-      _animController.forward();
+      _animationController.reset();
+      _animationController.forward();
     });
   }
 
@@ -867,13 +907,13 @@ class _PieTimerState extends State<PieTimer>
       height: 20,
       child: widget.isVideoRecording
           ? AnimatedBuilder(
-              animation: _animController,
+              animation: _animationController,
               builder: (BuildContext context, Widget? child) {
                 return CustomPaint(
                   painter: _PieTimerPainter(
                     progress: _tween.evaluate(
                       AlwaysStoppedAnimation(
-                        _animController.value,
+                        _animationController.value,
                       ),
                     ),
                   ),
